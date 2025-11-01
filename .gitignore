@@ -1,0 +1,18 @@
+# Binaries
+/do-t
+.nigesh/*
+.nigesh-old/*
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# OS files
+.DS_Store
+
+# Go build
+bin/
+pkg/

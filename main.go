@@ -1,0 +1,67 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+
+	"nadhi/do-t/ai"
+	"nadhi/do-t/cli"
+)
+
+var (
+	verbose  bool
+	fileType string
+)
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "usage: %s <command> [args]\n\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "commands:\n")
+	fmt.Fprintf(os.Stderr, "  search <term> [-file=ext]  search for term in files\n")
+	fmt.Fprintf(os.Stderr, "  activate <file>            chmod +x a file\n")
+	fmt.Fprintf(os.Stderr, "  store <key> <value>        store data in .nigesh/\n")
+	fmt.Fprintf(os.Stderr, "  <anything else>            ask nigesh\n")
+	fmt.Fprintf(os.Stderr, "\ntip: use quotes for questions with special chars\n")
+	fmt.Fprintf(os.Stderr, "  example: nigesh \"are you going to destroy my mac?\"\n")
+	fmt.Fprintf(os.Stderr, "\nflags:\n")
+	flag.PrintDefaults()
+}
+
+func main() {
+	flag.BoolVar(&verbose, "v", false, "verbose output")
+	flag.StringVar(&fileType, "file", "", "file extension filter")
+	flag.Usage = usage
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) < 1 {
+		usage()
+		os.Exit(2)
+	}
+
+	cmd := args[0]
+	switch cmd {
+	case "search":
+		if len(args) < 2 {
+			fmt.Fprintf(os.Stderr, "error: missing search term\n")
+			os.Exit(2)
+		}
+		cli.Search(args[1], fileType, verbose)
+	case "activate":
+		if len(args) < 2 {
+			fmt.Fprintf(os.Stderr, "error: missing file path\n")
+			os.Exit(2)
+		}
+		cli.Activate(args[1], verbose)
+	case "store":
+		if len(args) < 3 {
+			fmt.Fprintf(os.Stderr, "error: missing key or value\n")
+			os.Exit(2)
+		}
+		cli.Store(args[1], args[2], verbose)
+	default:
+		query := strings.Join(args, " ")
+		ai.AskNigesh(query, verbose)
+	}
+}

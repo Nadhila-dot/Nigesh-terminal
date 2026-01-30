@@ -106,7 +106,7 @@ func saveContext(conversations []Conversation) {
 }
 
 func compressMemory(conversations []Conversation) string {
-	apiKey := ""
+	apiKey := "AIzaSyBaMWiz9nXz9dFIKgdHqpR7G3pPZUKxjvk"
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=%s", apiKey)
 
 	var fullHistory strings.Builder
@@ -183,9 +183,11 @@ func buildContextPrompt(conversations []Conversation) string {
 	return context.String()
 }
 
+var currentModel = "gemini-2.5-flash"
+
 func callGemini(prompt string) (string, error) {
-	apiKey := ""
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%s", apiKey)
+	apiKey := "AIzaSyBaMWiz9nXz9dFIKgdHqpR7G3pPZUKxjvk"
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", currentModel, apiKey)
 
 	req := GeminiRequest{
 		Contents: []Content{
@@ -225,7 +227,14 @@ func callGemini(prompt string) (string, error) {
 	return "", fmt.Errorf("no response")
 }
 
-func AskNigesh(query string, verbose bool) {
+func AskNigesh(query string, verbose bool, usePro bool) {
+	// Set model based on flag
+	if usePro {
+		currentModel = "gemini-2.5-pro"
+	} else {
+		currentModel = "gemini-2.5-flash"
+	}
+
 	// Load conversation history
 	conversations := loadContext()
 	contextPrompt := buildContextPrompt(conversations)
@@ -233,10 +242,12 @@ func AskNigesh(query string, verbose bool) {
 	systemPrompt := `You are Nigesh, a powerful terminal AI assistant with a persistent workspace at .nigesh/workspace/. You actively DO things instead of telling users to do them.
 
 **YOUR WORKSPACE:**
-- You have a persistent workspace at .nigesh/workspace/ where you can create and store Python scripts
+- You have a persistent workspace at .nigesh/workspace/ for behind-the-scenes work
+- The user's CURRENT DIRECTORY is NOT your workspace - it's where they ran the command
+- When downloading/creating files for the user, create them in your workspace first, then move to current directory
 - Scripts you create are saved and can be reused or modified later
-- You can reference previous scripts by name (e.g., fetch_dog_pics.py)
 - Your conversation history is saved in .nigesh/context.json
+- ALWAYS install dependencies before running code that needs them
 
 **CRITICAL: Tool Format**
 You MUST use this EXACT format for tools: <Tool>ToolName(arguments)</Tool>
@@ -247,6 +258,11 @@ Any other format like <tool_code> or code blocks will NOT work.
 - <Tool>Command(command)</Tool> - Execute system commands and return output
 - <Tool>Python(filename.py|code)</Tool> - Write and execute Python code in your workspace
 - <Tool>PipInstall(package)</Tool> - Install Python packages with pip3
+
+**Environment Information:**
+- Current directory: Use pwd to get it
+- Your workspace: .nigesh/workspace/
+- System info: Use uname, sw_vers, etc.
 
 **Tool Examples:**
 - Create file: <Tool>Command(echo "content" > filename.txt)</Tool>
@@ -264,6 +280,8 @@ Any other format like <tool_code> or code blocks will NOT work.
 6. **NEVER SAY "You should install..."** - Just install it yourself with <Tool>PipInstall()</Tool>
 7. **DEBUG AND FIX ERRORS** - If a tool fails, analyze the error, fix it, and try again. NEVER give up after one failure.
 8. **REACH THE END GOAL** - Keep trying different approaches until you successfully complete the user's request
+9. **INSTALL DEPENDENCIES FIRST** - Before running code, install any required packages
+10. **WORKSPACE vs CURRENT DIR** - Do work in .nigesh/workspace/, then move final results to user's current directory
 
 **When to Use Each Tool:**
 - Simple commands → <Tool>Command()</Tool>
@@ -279,13 +297,13 @@ Keep responses practical and well-formatted with **bold**, __underline__, ### he
 	}
 	fullPrompt += "\n\nUser: " + query + "\n\nRemember: Use ONLY the exact format <Tool>Command(your command here)</Tool> for commands. No other formats will work."
 
-	maxIterations := 8 // Increased to allow for debugging and fixing errors
+	maxIterations := 90 // Increased to allow for debugging and fixing errors
 	iteration := 0
 
-	fmt.Printf("\033[90m🧠 nigesh starting reasoning chain...\033[0m\n")
+	fmt.Printf("\033[90m🔍 Working...\033[0m\n")
 
 	for iteration < maxIterations {
-		fmt.Printf("\033[90m💭 thinking (step %d/%d)...\033[0m\n", iteration+1, maxIterations)
+		fmt.Printf("\033[36m💭 Thinking... (%d/%d)\033[0m\n\n", iteration+1, maxIterations)
 
 		response, err := StreamGeminiResponse(fullPrompt)
 		if err != nil {
@@ -301,8 +319,27 @@ Keep responses practical and well-formatted with **bold**, __underline__, ### he
 		}
 
 		if len(toolCalls) > 0 {
-			// Execute tool calls found in the response
-			fmt.Printf("\033[93m🔍 detected tool calls, executing...\033[0m\n")
+			// Show tool calls cleanly
+			for _, tc := range toolCalls {
+				switch tc.Name {
+				case "Command":
+					fmt.Printf("\033[95m✏️ running:\033[0m %s\n\n", tc.Args)
+				case "Python":
+					parts := strings.SplitN(tc.Args, "|", 2)
+					if len(parts) == 2 {
+						fmt.Printf("\033[93m✏️ python:\033[0m %s\n\n", parts[0])
+					} else {
+						fmt.Printf("\033[93m✏️ python\033[0m\n\n")
+					}
+				case "Search":
+					fmt.Printf("\033[94m✏️ searching:\033[0m %s\n\n", tc.Args)
+				case "PipInstall":
+					fmt.Printf("\033[92m✏️ installing:\033[0m %s\n\n", tc.Args)
+				default:
+					fmt.Printf("\033[90m✏️ %s:\033[0m %s\n\n", tc.Name, tc.Args)
+				}
+			}
+
 			var toolResults strings.Builder
 			toolResults.WriteString("\nTool Results:\n")
 
@@ -312,7 +349,6 @@ Keep responses practical and well-formatted with **bold**, __underline__, ### he
 			}
 
 			// Continue reasoning with tool results - DON'T STOP
-			fmt.Printf("\033[90m🔄 analyzing results...\033[0m\n")
 
 			// Add tool results to prompt for NEXT iteration
 			fullPrompt += "\n\n" + toolResults.String() + "\n\nBased on the tool results above:\n- If there were ERRORS, analyze them and use more tools to FIX the issues\n- If everything succeeded, provide your final answer\n- Keep trying until the task is complete"
@@ -321,7 +357,7 @@ Keep responses practical and well-formatted with **bold**, __underline__, ### he
 		}
 
 		// No tools found, response already streamed - task complete
-		fmt.Printf("\033[90m✅ reasoning complete\033[0m\n")
+		//fmt.Printf("\033[90m✅ reasoning complete\033[0m\n")
 
 		// Save conversation to context
 		newConv := Conversation{

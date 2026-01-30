@@ -13,8 +13,8 @@ func StreamResponse(text string) {
 
 	// Check if this contains tool calls - don't show them, they'll be executed
 	if strings.Contains(text, "<Tool>") {
-		// Just show a simple message instead of the ugly tool syntax
-		fmt.Printf("\033[90m⚙️  nigesh is working...\033[0m\n")
+		// Tool calls will be shown in the main loop, just skip here
+		return
 	} else {
 		// Stream the response with typewriter effect, no box
 		for _, char := range formatted {
@@ -97,7 +97,7 @@ func stripAnsiCodes(s string) string {
 
 func StreamGeminiResponse(prompt string) (string, error) {
 	// Show thinking indicator
-	fmt.Printf("\033[90m💭 nigesh is thinking...\033[0m\n")
+//	fmt.Printf("\033[90m💭 nigesh is thinking...\033[0m\n")
 
 	// Call Gemini API
 	response, err := callGemini(prompt)

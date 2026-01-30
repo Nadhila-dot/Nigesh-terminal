@@ -13,6 +13,7 @@ import (
 var (
 	verbose  bool
 	fileType string
+	usePro   bool
 )
 
 func usage() {
@@ -30,6 +31,7 @@ func usage() {
 
 func main() {
 	flag.BoolVar(&verbose, "v", false, "verbose output")
+	flag.BoolVar(&usePro, "pro", false, "use gemini-2.5-pro model")
 	flag.StringVar(&fileType, "file", "", "file extension filter")
 	flag.Usage = usage
 	flag.Parse()
@@ -62,6 +64,6 @@ func main() {
 		cli.Store(args[1], args[2], verbose)
 	default:
 		query := strings.Join(args, " ")
-		ai.AskNigesh(query, verbose)
+		ai.AskNigesh(query, verbose, usePro)
 	}
 }

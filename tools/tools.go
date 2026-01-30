@@ -103,22 +103,20 @@ func ExecuteTool(tool ToolCall, verbose bool) string {
 
 	case "Command":
 
-		fmt.Printf("⚡ running: %s\n", tool.Args)
-
 		result, err := RunCommand(tool.Args)
 		if err != nil {
 			return fmt.Sprintf("Command execution failed: %v\n", err)
 		}
 
 		var output strings.Builder
-		output.WriteString(fmt.Sprintf("Command: %s\n", tool.Args))
 		output.WriteString(fmt.Sprintf("Duration: %v\n", result.Duration))
 		output.WriteString(fmt.Sprintf("Exit Code: %d\n", result.ExitCode))
 
 		if result.Output != "" {
-			output.WriteString("Output:\n")
 			output.WriteString(result.Output)
 			output.WriteString("\n")
+		} else if result.Error == "" {
+			output.WriteString("No output was given from this command\n")
 		}
 
 		if result.Error != "" {

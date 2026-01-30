@@ -32,7 +32,7 @@ type SearchResult struct {
 }
 
 func Search(query string) (*SearchResult, error) {
-	apiKey := ""
+	apiKey := "AIzaSyCPlxcs5PIbbEcTZ7bpXEok9KAhpp3O0bA"
 	cx := "f69337833a4504233"
 	escapedTerm := url.QueryEscape(query)
 	searchURL := fmt.Sprintf("https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&q=%s", apiKey, cx, escapedTerm)

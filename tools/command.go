@@ -104,15 +104,15 @@ func RunCommand(command string) (*CommandResult, error) {
 			stderr.Close()
 		}()
 
-		// Print command box header
-		fmt.Printf("\033[90m┌─ Command Output ─────────────────────────────────────────┐\033[0m\n")
+		// Print command output header
+		fmt.Printf("\033[90m📐 Command Output:\033[0m\n")
 
 		// Read stdout
 		go func() {
 			scanner := bufio.NewScanner(stdout)
 			for scanner.Scan() {
 				line := scanner.Text()
-				fmt.Printf("\033[90m│\033[0m %s\n", line)
+				fmt.Printf("%s\n", line)
 				outputBuilder.WriteString(line + "\n")
 			}
 		}()
@@ -122,14 +122,12 @@ func RunCommand(command string) (*CommandResult, error) {
 			scanner := bufio.NewScanner(stderr)
 			for scanner.Scan() {
 				line := scanner.Text()
-				fmt.Printf("\033[91m│\033[0m %s\n", line)
+				fmt.Printf("\033[91m%s\033[0m\n", line)
 				errorBuilder.WriteString(line + "\n")
 			}
 		}()
 
 		err := cmd.Wait()
-		// Print command box footer
-		fmt.Printf("\033[90m└──────────────────────────────────────────────────────────┘\033[0m\n")
 		done <- err
 	}()
 

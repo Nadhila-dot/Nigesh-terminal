@@ -1,0 +1,22 @@
+{
+    data = {hello world},
+    status = {200},
+    array = {
+        something = {
+            key1 = {value1},
+            key2 = {value2}
+        }
+    },
+    message = {Operation successful}, //Comment support
+    // Support for types
+    isActive = bool:{true},
+    count = int:{42},
+    piValue = float:{3.14}
+    array = Map:{
+        something = {
+            key1 = {value1},
+            key2 = {value2}
+        }
+    },
+
+}
